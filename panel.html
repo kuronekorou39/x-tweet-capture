@@ -1,0 +1,1990 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Tweet Capture</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+      background: #15202b;
+      color: #ffffff;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* メインコンテナ */
+    .main-container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* 左側: キーワード設定エリア */
+    .keywords-section {
+      width: 400px;
+      background: #192734;
+      border-right: 1px solid #38444d;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .keywords-header {
+      padding: 20px;
+      border-bottom: 1px solid #38444d;
+      background: #1e2732;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .add-keyword-btn {
+      width: 100%;
+      padding: 10px 16px;
+      background: #1da1f2;
+      color: #ffffff;
+      border: none;
+      border-radius: 9999px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .add-keyword-btn:hover {
+      background: #1a91da;
+    }
+
+    .add-keyword-btn:disabled {
+      background: #536471;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .keywords-list {
+      padding: 16px;
+      flex: 1;
+    }
+
+    /* キーワードカード */
+    .keyword-card {
+      background: #253341;
+      border: 1px solid #38444d;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      transition: all 0.2s;
+    }
+
+    .keyword-card.active {
+      border-color: #1da1f2;
+      box-shadow: 0 0 0 1px #1da1f2;
+    }
+
+    .keyword-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .keyword-number {
+      width: 24px;
+      height: 24px;
+      background: #1da1f2;
+      color: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .keyword-card.keyword-2 .keyword-number {
+      background: #f91880;
+    }
+
+    .keyword-card.keyword-3 .keyword-number {
+      background: #7856ff;
+    }
+
+    .keyword-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .keyword-action-btn {
+      padding: 4px 8px;
+      background: transparent;
+      border: 1px solid #38444d;
+      color: #8b98a5;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .keyword-action-btn:hover {
+      border-color: #536471;
+      color: #ffffff;
+    }
+
+    .keyword-action-btn.delete:hover {
+      border-color: #f4212e;
+      color: #f4212e;
+    }
+
+    .keyword-input-group {
+      margin-bottom: 12px;
+    }
+
+    .keyword-input-group label {
+      font-size: 12px;
+      color: #8b98a5;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .keyword-input-group input,
+    .keyword-input-group select {
+      width: 100%;
+      background: #192734;
+      border: 1px solid #38444d;
+      color: #ffffff;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .keyword-input-group input:focus,
+    .keyword-input-group select:focus {
+      outline: none;
+      border-color: #1da1f2;
+      background: #15202b;
+    }
+
+    .keyword-dates {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .keyword-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      background: #1da1f2;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      background: #1a91da;
+    }
+
+    .btn-primary:disabled {
+      background: #1a6ba7;
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-danger {
+      background: #f4212e;
+      color: #ffffff;
+    }
+
+    .btn-danger:hover {
+      background: #dc1e29;
+    }
+
+    .btn-secondary {
+      background: #536471;
+      color: #ffffff;
+    }
+
+    .btn-secondary:hover {
+      background: #425261;
+    }
+
+    /* 右側: 分析エリア */
+    .analytics-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* 統計サマリー */
+    .stats-summary {
+      background: #192734;
+      border-bottom: 1px solid #38444d;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex-shrink: 0;
+    }
+
+    .keyword-stats-card {
+      background: #253341;
+      border-radius: 8px;
+      border: 1px solid #38444d;
+      padding: 16px;
+    }
+
+    .keyword-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+    }
+
+    .stat-item {
+      background: #1e2732;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #38444d;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #8b98a5;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.2;
+    }
+
+    .stat-value.small {
+      font-size: 14px;
+    }
+
+    /* タブシステム */
+    .analytics-tabs {
+      background: #1e2732;
+      border-bottom: 1px solid #38444d;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .analytics-tab {
+      padding: 12px 20px;
+      background: transparent;
+      border: none;
+      color: #8b98a5;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      transition: all 0.2s;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .analytics-tab:hover {
+      background: rgba(29, 161, 242, 0.1);
+      color: #1da1f2;
+    }
+
+    .analytics-tab.active {
+      color: #1da1f2;
+      background: #192734;
+    }
+
+    .analytics-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #1da1f2;
+    }
+
+    /* タブコンテンツ */
+    .analytics-content {
+      flex: 1;
+      background: #192734;
+      overflow: hidden;
+    }
+
+    .analytics-panel {
+      height: 100%;
+      padding: 24px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .analytics-panel.active {
+      display: block;
+    }
+
+    /* グラフパネル */
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .chart-title {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chart-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .chart-type-select {
+      background: #253341;
+      border: 1px solid #38444d;
+      color: #ffffff;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .chart-wrapper {
+      background: #15202b;
+      border: 1px solid #38444d;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chart-placeholder {
+      text-align: center;
+      color: #8b98a5;
+    }
+
+    .chart-placeholder-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 20px;
+      margin-top: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+    }
+
+    .legend-color-1 { background: #1da1f2; }
+    .legend-color-2 { background: #f91880; }
+    .legend-color-3 { background: #7856ff; }
+
+    /* ツイートパネル */
+    .tweets-header,
+    .accounts-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .tweets-title,
+    .accounts-title {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tweets-filter,
+    .accounts-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .keyword-filter-btn {
+      padding: 6px 14px;
+      background: #253341;
+      border: 1px solid #38444d;
+      color: #8b98a5;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .keyword-filter-btn.active {
+      background: #1da1f2;
+      color: #ffffff;
+      border-color: #1da1f2;
+    }
+
+    .keyword-filter-btn.keyword-2.active {
+      background: #f91880;
+      border-color: #f91880;
+    }
+
+    .keyword-filter-btn.keyword-3.active {
+      background: #7856ff;
+      border-color: #7856ff;
+    }
+
+    .tweets-list,
+    .accounts-list {
+      height: calc(100% - 80px);
+      overflow-y: auto;
+    }
+
+    /* アカウント分析パネル */
+    .account-item {
+      background: #253341;
+      border: 1px solid #38444d;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .account-item:hover {
+      border-color: #536471;
+      background: #2a3a4a;
+    }
+
+    .account-item.expanded {
+      border-color: #1da1f2;
+      background: #1e2732;
+    }
+
+    .account-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .account-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+
+    .account-avatar {
+      width: 48px;
+      height: 48px;
+      background: #536471;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      overflow: hidden;
+    }
+
+    .account-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .account-details h4 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0 0 4px 0;
+    }
+
+    .account-details .handle {
+      font-size: 14px;
+      color: #1da1f2;
+      margin: 0;
+    }
+
+    .account-stats {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .stat-badge {
+      background: #192734;
+      padding: 4px 10px;
+      border-radius: 12px;
+      color: #8b98a5;
+      border: 1px solid #38444d;
+    }
+
+    .stat-badge.primary {
+      background: #1da1f2;
+      color: #ffffff;
+      border-color: #1da1f2;
+    }
+
+    .account-tweets {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #38444d;
+      display: none;
+    }
+
+    .account-tweets.visible {
+      display: block;
+    }
+
+    .account-tweet {
+      background: #192734;
+      border: 1px solid #38444d;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .account-tweet-meta {
+      font-size: 12px;
+      color: #8b98a5;
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ローディングオーバーレイ */
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(21, 32, 43, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(2px);
+    }
+
+    .loading-content {
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #38444d;
+      border-top-color: #1da1f2;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    .loading-message {
+      font-size: 14px;
+      margin-bottom: 16px;
+      color: #8b98a5;
+    }
+
+    .loading-progress {
+      width: 200px;
+      height: 4px;
+      background: #38444d;
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 0 auto;
+    }
+
+    .loading-progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #1da1f2, #1a91da);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .tweet-item {
+      background: #253341;
+      border: 1px solid #38444d;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.2s;
+    }
+
+    .tweet-item:hover {
+      border-color: #536471;
+    }
+
+    .tweet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .tweet-user {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tweet-avatar {
+      width: 32px;
+      height: 32px;
+      background: #536471;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .tweet-user-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tweet-username {
+      font-weight: 700;
+      font-size: 14px;
+      color: #ffffff;
+    }
+
+    .tweet-handle {
+      font-size: 12px;
+      color: #8b98a5;
+    }
+
+    .tweet-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: #8b98a5;
+    }
+
+    .tweet-keyword-tag {
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .tweet-keyword-1 { background: #1da1f2; color: #ffffff; }
+    .tweet-keyword-2 { background: #f91880; color: #ffffff; }
+    .tweet-keyword-3 { background: #7856ff; color: #ffffff; }
+
+    .tweet-content {
+      margin-bottom: 12px;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .tweet-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: #8b98a5;
+    }
+
+    .tweet-stat {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* リンクコピーボタン */
+    .link-copy-btn {
+      background: transparent;
+      border: 1px solid #38444d;
+      color: #8b98a5;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .link-copy-btn:hover {
+      background: #253341;
+      border-color: #1da1f2;
+      color: #1da1f2;
+    }
+
+    .link-copy-btn:active {
+      transform: scale(0.95);
+    }
+
+    .link-copy-btn.copied {
+      background: #00ba7c;
+      border-color: #00ba7c;
+      color: #ffffff;
+    }
+
+
+    /* インポートモーダル */
+    .import-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .import-modal-content {
+      background: #253341;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+
+    .import-modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid #38444d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .import-modal-header h3 {
+      margin: 0;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .import-modal-close {
+      background: none;
+      border: none;
+      color: #8899a6;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .import-modal-close:hover {
+      background: #38444d;
+      color: #ffffff;
+    }
+
+    .import-modal-body {
+      padding: 20px 24px 24px;
+    }
+
+    .import-file-section {
+      margin-bottom: 20px;
+    }
+
+    .import-file-button {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      padding: 20px;
+      background: #1e2732;
+      border: 2px solid #38444d;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: inherit;
+    }
+
+    .import-file-button:hover {
+      background: #242f3d;
+      border-color: #1da1f2;
+    }
+
+    .import-file-icon {
+      font-size: 32px;
+      color: #1da1f2;
+      flex-shrink: 0;
+    }
+
+    .import-file-text {
+      flex: 1;
+      text-align: left;
+    }
+
+    .import-file-title {
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .import-file-desc {
+      color: #8899a6;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .import-divider {
+      text-align: center;
+      margin: 20px 0;
+      position: relative;
+      color: #8899a6;
+      font-size: 14px;
+    }
+
+    .import-divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: #38444d;
+      z-index: 1;
+    }
+
+    .import-divider span {
+      background: #253341;
+      padding: 0 16px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .import-drop-zone {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 24px;
+      background: #1e2732;
+      border: 2px dashed #38444d;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .import-drop-zone:hover,
+    .import-drop-zone.drag-over {
+      background: #242f3d;
+      border-color: #1da1f2;
+    }
+
+    .import-drop-icon {
+      font-size: 32px;
+      color: #1da1f2;
+      flex-shrink: 0;
+    }
+
+    .import-drop-text {
+      flex: 1;
+      text-align: left;
+    }
+
+    .import-drop-title {
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .import-drop-desc {
+      color: #8899a6;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    /* ログパネル */
+    .logs-content {
+      height: 100%;
+      padding: 0;
+      overflow-y: auto;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      background: #0d1117;
+      border: 1px solid #38444d;
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .log-entry {
+      margin-bottom: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .log-time {
+      color: #536471;
+      flex-shrink: 0;
+      font-size: 11px;
+    }
+
+    .log-keyword {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .log-keyword-1 { background: #1da1f2; color: #ffffff; }
+    .log-keyword-2 { background: #f91880; color: #ffffff; }
+    .log-keyword-3 { background: #7856ff; color: #ffffff; }
+
+    .log-message {
+      flex: 1;
+      font-size: 11px;
+    }
+
+    .log-info { color: #1da1f2; }
+    .log-success { color: #00ba7c; }
+    .log-error { color: #f4212e; }
+    .log-warning { color: #ffa000; }
+
+    /* レート制限バー */
+    .rate-limit-bar {
+      background: #192734;
+      border-top: 1px solid #38444d;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-shrink: 0;
+    }
+
+    .rate-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .rate-label {
+      color: #8b98a5;
+    }
+
+    .rate-value {
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .rate-progress {
+      flex: 1;
+      height: 8px;
+      background: #253341;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .rate-progress-fill {
+      height: 100%;
+      background: #00ba7c;
+      transition: width 0.3s, background 0.3s;
+    }
+
+    .rate-progress-fill.warning { background: #ffa000; }
+    .rate-progress-fill.danger { background: #f4212e; }
+
+    /* ローディング状態 */
+    .loading {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid transparent;
+      border-top-color: #1da1f2;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ステータスインジケーター */
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #536471;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .status-indicator.active {
+      background: #00ba7c;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .status-indicator.error {
+      background: #f4212e;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes progress-slide {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* スクロールバー */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #192734;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #38444d;
+      border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #536471;
+    }
+
+    /* 空の状態 */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+      color: #8b98a5;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    .empty-state-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .empty-state-desc {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- メインコンテナ -->
+  <div class="main-container">
+    <!-- 左側: キーワード設定 -->
+    <div class="keywords-section">
+      <div class="keywords-header">
+        <button class="add-keyword-btn" id="addKeywordBtn">
+          <span>➕</span>
+          キーワードを追加（最大3個）
+        </button>
+      </div>
+      <div class="keywords-list" id="keywordsList">
+        <!-- キーワードカードが動的に追加される -->
+      </div>
+    </div>
+
+    <!-- 右側: 分析エリア -->
+    <div class="analytics-section">
+      <!-- 統計サマリー（移動済み） -->
+      <!-- 統計情報はキーワードカード内に移動 -->
+
+      <!-- タブナビゲーション -->
+      <div class="analytics-tabs">
+        <button class="analytics-tab" data-tab="tweets">
+          <span>📝</span>
+          ツイート
+        </button>
+        <button class="analytics-tab active" data-tab="graph">
+          <span>📊</span>
+          トピック分析
+        </button>
+        <button class="analytics-tab" data-tab="influence">
+          <span>💫</span>
+          アカウント分析
+        </button>
+        <button class="analytics-tab" data-tab="logs">
+          <span>📋</span>
+          ログ
+        </button>
+      </div>
+
+      <!-- タブコンテンツ -->
+      <div class="analytics-content">
+        <!-- グラフパネル -->
+        <div class="analytics-panel active" id="graphPanel">
+          <div class="chart-header">
+            <div class="chart-title">
+              <span>📊</span>
+              トレンド比較グラフ
+            </div>
+            <div class="chart-controls">
+              <select class="chart-type-select" id="chartType">
+                <option value="hourly">時間別</option>
+                <option value="daily">日別</option>
+                <option value="weekly">週別</option>
+                <option value="monthly">月別</option>
+                <option value="yearly">年別</option>
+              </select>
+              
+              <div class="period-controls" style="display: flex; align-items: center; gap: 8px;">
+                <select class="chart-type-select" id="periodMode" style="width: 100px;">
+                  <option value="all">全期間</option>
+                  <option value="custom">期間指定</option>
+                </select>
+                
+                <div id="customPeriodInputs" style="display: none; gap: 8px; align-items: center;">
+                  <span style="color: #8b98a5; font-size: 12px;">開始:</span>
+                  <input type="date" id="startDate" style="width: 140px; padding: 4px 8px; background: #192734; border: 1px solid #38444d; border-radius: 4px; color: #ffffff;">
+                  <span style="color: #8b98a5; font-size: 12px;">終了:</span>
+                  <input type="date" id="endDate" style="width: 140px; padding: 4px 8px; background: #192734; border: 1px solid #38444d; border-radius: 4px; color: #ffffff;">
+                </div>
+              </div>
+              
+              <button class="btn btn-secondary" id="refreshChartBtn" style="padding: 6px 12px;">
+                <span>🔄</span>
+                更新
+              </button>
+              <button class="btn btn-secondary" id="toggleValuesBtn" style="padding: 6px 12px; background: #536471;">
+                <span>🔢</span>
+                数値非表示
+              </button>
+            </div>
+          </div>
+          <div class="chart-wrapper">
+            <div class="chart-placeholder" id="chartPlaceholder">
+              <div class="chart-placeholder-icon">📈</div>
+              <div>キーワードを追加して検索を開始してください</div>
+            </div>
+            <canvas id="trendChart" style="display: none; width: 100%; max-height: 350px;"></canvas>
+          </div>
+          <div class="chart-legend" id="chartLegend" style="display: none;">
+            <!-- 凡例が動的に追加される -->
+          </div>
+        </div>
+
+        <!-- ツイートパネル -->
+        <div class="analytics-panel" id="tweetsPanel">
+          <div class="tweets-header">
+            <div class="tweets-title">
+              <span>📝</span>
+              ツイート一覧
+            </div>
+            <div class="tweets-filter">
+              <span style="font-size: 12px; color: #8b98a5;">フィルター:</span>
+              <button class="keyword-filter-btn active" data-filter="all">
+                すべて
+              </button>
+              <!-- キーワードフィルターボタンが動的に追加される -->
+            </div>
+          </div>
+          
+          <!-- ツイート検索・並び替えコントロール -->
+          <div class="tweets-controls" style="display: flex; gap: 8px; align-items: center; margin: 16px 20px; padding: 12px; background: #192734; border-radius: 8px; border: 1px solid #38444d; flex-wrap: wrap;">
+            <!-- 検索欄 -->
+            <input id="tweetsSearchInput" type="text" placeholder="検索..." 
+                   style="background: #253341; border: 1px solid #38444d; color: #ffffff; padding: 6px 8px; border-radius: 4px; font-size: 12px; flex: 1; min-width: 120px;">
+            
+            <!-- 並び替え -->
+            <select id="tweetsSortBy" style="background: #253341; border: 1px solid #38444d; color: #ffffff; padding: 6px 8px; border-radius: 4px; font-size: 12px; min-width: 100px;">
+              <option value="timestamp">時刻順</option>
+              <option value="likes">いいね数</option>
+              <option value="retweets">リツイート数</option>
+              <option value="replies">返信数</option>
+              <option value="views">閲覧数</option>
+              <option value="influence">影響力ポイント</option>
+            </select>
+            
+            <select id="tweetsSortOrder" style="background: #253341; border: 1px solid #38444d; color: #ffffff; padding: 6px 8px; border-radius: 4px; font-size: 12px; min-width: 80px;">
+              <option value="desc">降順</option>
+              <option value="asc">昇順</option>
+            </select>
+            
+            <button id="applyControlsBtn" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; background: #1da1f2; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s;">
+              適用
+            </button>
+          </div>
+          
+          <!-- ページング情報 -->
+          <div class="tweets-pagination-info" style="display: none; padding: 8px 12px; background: #192734; border-radius: 4px; margin-bottom: 12px; font-size: 12px; color: #8b98a5; text-align: center;">
+            <span id="tweetsPageInfo">-</span>
+          </div>
+          
+          <div class="tweets-list" id="tweetsList">
+            <div class="empty-state">
+              <div class="empty-state-icon">📝</div>
+              <div class="empty-state-title">ツイートがありません</div>
+              <div class="empty-state-desc">キーワード検索を開始すると、<br>ここにツイートが表示されます。</div>
+            </div>
+          </div>
+          
+          <!-- ページングコントロール -->
+          <div class="tweets-pagination-controls" style="display: none; padding: 16px; background: #192734; border-radius: 4px; margin-top: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <button id="tweetsPrevBtn" style="padding: 8px 16px; background: #253341; border: 1px solid #38444d; color: #ffffff; border-radius: 4px; cursor: pointer; font-size: 12px;" disabled>
+                ← 前のページ
+              </button>
+              
+              <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #8b98a5;">
+                ページ
+                <input id="tweetsPageInput" type="number" min="1" value="1" style="width: 50px; padding: 4px; background: #253341; border: 1px solid #38444d; color: #ffffff; border-radius: 4px; text-align: center; font-size: 12px;">
+                / <span id="tweetsTotalPages">1</span>
+                <button id="tweetsGoToPageBtn" style="padding: 4px 8px; background: #1da1f2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                  移動
+                </button>
+              </div>
+              
+              <button id="tweetsNextBtn" style="padding: 8px 16px; background: #253341; border: 1px solid #38444d; color: #ffffff; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                次のページ →
+              </button>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- 影響力分析パネル -->
+        <div class="analytics-panel" id="influencePanel">
+          <div class="influence-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div class="influence-title" style="font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+              <span>💫</span>
+              アカウント分析
+            </div>
+            <div class="influence-controls" style="display: flex; gap: 12px; align-items: center;">
+              <button id="influenceCompareMode" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;">
+                <span>⚖️</span>
+                比較モード
+              </button>
+              <!-- 基準値設定ボタンは新仕様では不要（対数スケーリング使用）
+              <button id="radarBenchmarkSettings" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px; display: none;">
+                <span>⚙️</span>
+                基準値設定
+              </button>
+              -->
+              <div class="influence-user-selector" id="influenceUserSelector">
+                <!-- ユーザー選択UIがここに動的に追加される -->
+              </div>
+            </div>
+          </div>
+          
+          <!-- 単一ユーザー表示モード -->
+          <div class="influence-content single-mode" id="influenceContentSingle">
+            <!-- 影響力スコアカード -->
+            <div class="influence-score-card" style="background: #253341; border: 1px solid #38444d; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <div class="influence-user-info" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                  <div class="influence-avatar" style="width: 64px; height: 64px; background: #536471; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                    <span id="influenceAvatar">👤</span>
+                  </div>
+                  <div>
+                    <h3 id="influenceUsername" style="font-size: 20px; font-weight: 700; margin: 0;">ユーザーを選択</h3>
+                    <p id="influenceHandle" style="color: #1da1f2; margin: 0;">@username</p>
+                  </div>
+                </div>
+                
+                <!-- データ取得情報 -->
+                <div id="influenceDataInfo" style="text-align: right; font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 8px; line-height: 1.3;">
+                  <div id="influenceDataSummary">-</div>
+                </div>
+              </div>
+              
+              <!-- レーダーグラフと詳細スコア -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- レーダーグラフ -->
+                <div class="radar-chart-container" style="background: #192734; padding: 16px; border-radius: 8px;">
+                  <div style="font-size: 14px; color: #8b98a5; margin-bottom: 12px; text-align: center; position: relative;">
+                    <span style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                      <span style="display: flex; align-items: center; gap: 6px;">
+                        影響力レーダーチャート
+                        <span class="radar-help-icon" style="
+                          display: inline-flex; align-items: center; justify-content: center;
+                          width: 16px; height: 16px; border-radius: 50%; 
+                          background: #536471; color: #ffffff; font-size: 10px; 
+                          cursor: help; transition: all 0.2s;
+                        ">?</span>
+                      </span>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 4px; background: #253341; border: 1px solid #38444d; border-radius: 4px; padding: 2px;">
+                          <button id="radarScaleLog" class="radar-scale-btn" style="
+                            background: #1da1f2; border: none; color: #ffffff;
+                            padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;
+                            transition: all 0.2s;
+                          ">対数</button>
+                          <button id="radarScaleLinear" class="radar-scale-btn" style="
+                            background: transparent; border: none; color: #8b98a5;
+                            padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;
+                            transition: all 0.2s;
+                          ">線形</button>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; gap: 4px; background: #253341; border: 1px solid #38444d; border-radius: 4px; padding: 2px;">
+                          <button id="radarValuesShow" class="radar-values-btn" style="
+                            background: transparent; border: none; color: #8b98a5;
+                            padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;
+                            transition: all 0.2s;
+                          ">数値表示</button>
+                          <button id="radarValuesHide" class="radar-values-btn" style="
+                            background: #1da1f2; border: none; color: #ffffff;
+                            padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;
+                            transition: all 0.2s;
+                          ">数値非表示</button>
+                        </div>
+                      </div>
+                    </span>
+                    
+                    <div class="radar-help-tooltip" style="
+                      position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+                      background: #1a2332; border: 1px solid #38444d; border-radius: 8px;
+                      padding: 16px; z-index: 1000; width: 350px; display: none;
+                      box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-top: 8px;
+                    ">
+                      <h4 style="margin: 0 0 12px 0; color: #ffffff; font-size: 14px;">レーダーチャート説明</h4>
+                      
+                      <div style="margin-bottom: 12px;">
+                        <h5 style="margin: 0 0 6px 0; color: #1da1f2; font-size: 12px;">各指標の100%基準値：</h5>
+                        <ul style="margin: 0; padding-left: 16px; color: #8b98a5; font-size: 11px; line-height: 1.4;">
+                          <li>最大いいね: 10,000件</li>
+                          <li>上位平均いいね: 2,000件</li>
+                          <li>最大リツイート: 1,000件</li>
+                          <li>上位平均リツイート: 200件</li>
+                          <li>最大閲覧数: 100,000回</li>
+                          <li>上位平均閲覧数: 20,000回</li>
+                          <li>投稿頻度: 50投稿/週</li>
+                          <li>安定性: 100pt（複合指標）</li>
+                        </ul>
+                      </div>
+                      
+                      <div style="margin-bottom: 12px;">
+                        <h5 style="margin: 0 0 6px 0; color: #1da1f2; font-size: 12px;">安定性スコア計算式：</h5>
+                        <div style="color: #8b98a5; font-size: 11px; line-height: 1.4;">
+                          【いいね(40%) + リツイート(40%) + 閲覧数(20%)】× 0.5<br>
+                          各指標 = 非ゼロ中央値×0.3 + 上位平均×0.2 + 非ゼロ割合×50×0.1<br>
+                          <small>※ 継続的なエンゲージメント獲得能力を評価</small>
+                        </div>
+                      </div>
+                      
+                      <div style="color: #8b98a5; font-size: 11px;">
+                        <strong style="color: #ff6b35;">オレンジ線</strong> = 100%基準線<br>
+                        <strong>上位平均</strong> = 上位20%の投稿の平均値<br>
+                        チャートが基準線を超えるほど優秀な数値
+                      </div>
+                    </div>
+                  </div>
+                  <div style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+                    <canvas id="influenceRadarChart" width="280" height="280" style="max-width: 100%;"></canvas>
+                    <div style="display: flex; align-items: center; gap: 4px; background: #253341; border: 1px solid #38444d; border-radius: 4px; padding: 4px; margin-top: 8px;">
+                      <button id="radarZoomOutSingle" class="radar-zoom-btn" style="
+                        background: transparent; border: none; color: #8b98a5;
+                        padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;
+                        transition: all 0.2s;
+                      ">－</button>
+                      <span id="radarZoomLevelSingle" style="color: #8b98a5; font-size: 11px; min-width: 45px; text-align: center;">100%</span>
+                      <button id="radarZoomInSingle" class="radar-zoom-btn" style="
+                        background: transparent; border: none; color: #8b98a5;
+                        padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;
+                        transition: all 0.2s;
+                      ">＋</button>
+                      <button id="radarZoomResetSingle" class="radar-zoom-btn" style="
+                        background: transparent; border: none; color: #8b98a5;
+                        padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;
+                        transition: all 0.2s;
+                      ">リセット</button>
+                    </div>
+                  </div>
+                  <div id="stabilityDetail" style="display: none; font-size: 10px; color: #8b98a5; margin-top: 8px; text-align: center;"></div>
+                </div>
+                
+                <!-- 詳細統計 -->
+                <div class="influence-detail-scores" style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+                  <!-- 総合スコア（コンパクト版） -->
+                  <div class="stats-group" style="background: #192734; padding: 12px; border-radius: 8px; text-align: center; position: relative;">
+                    <div style="font-size: 13px; color: #8b98a5; margin-bottom: 8px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                      💫 総合影響力スコア
+                      <span class="total-score-help-icon" style="
+                        display: inline-flex; align-items: center; justify-content: center;
+                        width: 14px; height: 14px; border-radius: 50%; 
+                        background: #536471; color: #ffffff; font-size: 9px; 
+                        cursor: help; transition: all 0.2s;
+                      ">?</span>
+                    </div>
+                    <div id="influenceTotalScore" style="font-size: 32px; font-weight: 700; color: #1da1f2;">0</div>
+                    
+                    <div class="total-score-help-tooltip" style="
+                      position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+                      background: #1a2332; border: 1px solid #38444d; border-radius: 8px;
+                      padding: 16px; z-index: 1000; width: 320px; display: none;
+                      box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-top: 8px;
+                    ">
+                      <h4 style="margin: 0 0 12px 0; color: #ffffff; font-size: 14px;">総合影響力スコア算出方法</h4>
+                      
+                      <div style="margin-bottom: 12px;">
+                        <h5 style="margin: 0 0 6px 0; color: #1da1f2; font-size: 12px;">各ツイートの基本スコア:</h5>
+                        <div style="color: #8b98a5; font-size: 11px; line-height: 1.4;">
+                          <strong>基本スコア = いいね×1.0 + リツイート×3.0 + 返信×2.0 + 閲覧数×0.01</strong><br>
+                          <small>※ シンプルな加算方式、リツイートを重視</small>
+                        </div>
+                      </div>
+                      
+                      <div style="margin-bottom: 12px;">
+                        <h5 style="margin: 0 0 6px 0; color: #1da1f2; font-size: 12px;">時期による重み調整:</h5>
+                        <div style="color: #8b98a5; font-size: 11px; line-height: 1.4;">
+                          • 年数経過により重み = 0.95<sup>経過年数</sup><br>
+                          • 最小重み0.5（古いデータも適切に評価）<br>
+                          • 例: 1年前95%、3年前86%、5年前77%
+                        </div>
+                      </div>
+                      
+                      <div style="color: #8b98a5; font-size: 11px;">
+                        <strong>最終スコア = 全ツイートの（基本スコア × 時期重み）の合計</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- いいね数統計 -->
+                  <div class="stats-group" style="background: #192734; padding: 12px; border-radius: 8px;">
+                    <div style="font-size: 13px; color: #8b98a5; margin-bottom: 10px; font-weight: 600;">❤️ いいね数</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 11px;">最大</div>
+                        <div id="maxLikes" style="font-weight: 700; color: #ffffff; font-size: 18px;">0</div>
+                      </div>
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 11px;">上位平均</div>
+                        <div id="topAvgLikes" style="font-weight: 700; color: #ffffff; font-size: 18px;">0</div>
+                      </div>
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 10px;">全体平均</div>
+                        <div id="avgLikes" style="font-weight: 600; color: #8b98a5; font-size: 13px;">0</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- リツイート数統計 -->
+                  <div class="stats-group" style="background: #192734; padding: 12px; border-radius: 8px;">
+                    <div style="font-size: 13px; color: #8b98a5; margin-bottom: 10px; font-weight: 600;">🔄 リツイート数</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 11px;">最大</div>
+                        <div id="maxRetweets" style="font-weight: 700; color: #ffffff; font-size: 18px;">0</div>
+                      </div>
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 11px;">上位平均</div>
+                        <div id="topAvgRetweets" style="font-weight: 700; color: #ffffff; font-size: 18px;">0</div>
+                      </div>
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 10px;">全体平均</div>
+                        <div id="avgRetweets" style="font-weight: 600; color: #8b98a5; font-size: 13px;">0</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 閲覧数統計 -->
+                  <div class="stats-group" style="background: #192734; padding: 12px; border-radius: 8px;">
+                    <div style="font-size: 13px; color: #8b98a5; margin-bottom: 10px; font-weight: 600;">👁️ 閲覧数</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 11px;">最大</div>
+                        <div id="maxViews" style="font-weight: 700; color: #ffffff; font-size: 18px;">0</div>
+                      </div>
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 11px;">上位平均</div>
+                        <div id="topAvgViews" style="font-weight: 700; color: #ffffff; font-size: 18px;">0</div>
+                      </div>
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 10px;">全体平均</div>
+                        <div id="avgViews" style="font-weight: 600; color: #8b98a5; font-size: 13px;">0</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- 投稿統計 -->
+                  <div class="stats-group" style="background: #192734; padding: 12px; border-radius: 8px;">
+                    <div style="font-size: 13px; color: #8b98a5; margin-bottom: 10px; font-weight: 600;">📊 投稿統計</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 11px;">投稿数</div>
+                        <div id="postCount" style="font-weight: 700; color: #ffffff; font-size: 18px;">0</div>
+                      </div>
+                      <div style="text-align: center;">
+                        <div style="color: #8b98a5; font-size: 11px;">投稿頻度</div>
+                        <div id="postFrequency" style="font-weight: 700; color: #ffffff; font-size: 18px;">0</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- レーダーチャート (この古いセクションを削除) -->
+            
+            <!-- 時間帯別ヒートマップ -->
+            <div class="influence-heatmap" style="background: #253341; border: 1px solid #38444d; border-radius: 12px; padding: 20px;">
+              <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">投稿時間帯分析</h4>
+              <div id="influenceHeatmap" style="min-height: 120px; display: flex; align-items: center; justify-content: center; color: #8b98a5;">
+                データを収集してください
+              </div>
+            </div>
+            
+            <!-- エンゲージメント時系列グラフ -->
+            <div class="influence-timeseries" style="background: #253341; border: 1px solid #38444d; border-radius: 12px; padding: 20px; margin-top: 20px;" id="influenceTimeSeries">
+              <div style="min-height: 200px; display: flex; align-items: center; justify-content: center; color: #8b98a5;">
+                データを収集してください
+              </div>
+            </div>
+          </div>
+
+          <!-- 複数ユーザー比較モード -->
+          <div class="influence-content compare-mode" id="influenceContentCompare" style="display: none;">
+            
+            <!-- ユーザー選択UIとレーダーチャートの横並びレイアウト -->
+            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+              <!-- 左側: ユーザー選択UI -->
+              <div id="comparisonUserListContainer" style="flex: 0 0 280px; background: #253341; border: 1px solid #38444d; border-radius: 12px; padding: 20px;">
+                <h4 style="font-size: 14px; font-weight: 600; color: #ffffff; margin: 0 0 16px 0;">比較するユーザーを選択</h4>
+                <div id="comparisonUserList" style="max-height: 400px; overflow-y: auto;">
+                  <!-- ユーザーリストがここに動的に生成される -->
+                </div>
+              </div>
+              
+              <!-- 右側: レーダーチャート -->
+              <div style="flex: 1; background: #253341; border: 1px solid #38444d; border-radius: 12px; padding: 20px;">
+                <div style="font-size: 14px; color: #8b98a5; margin-bottom: 12px; text-align: center; position: relative;">
+                  <span style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                      影響力比較レーダーチャート
+                    <span class="radar-compare-help-icon" style="
+                      display: inline-flex; align-items: center; justify-content: center;
+                      width: 16px; height: 16px; border-radius: 50%; 
+                      background: #536471; color: #ffffff; font-size: 10px; 
+                      cursor: help; transition: all 0.2s;
+                    ">?</span>
+                  </span>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 4px; background: #253341; border: 1px solid #38444d; border-radius: 4px; padding: 2px;">
+                      <button id="radarScaleLogCompare" class="radar-scale-btn" style="
+                        background: #1da1f2; border: none; color: #ffffff;
+                        padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;
+                        transition: all 0.2s;
+                      ">対数</button>
+                      <button id="radarScaleLinearCompare" class="radar-scale-btn" style="
+                        background: transparent; border: none; color: #8b98a5;
+                        padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;
+                        transition: all 0.2s;
+                      ">線形</button>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 4px; background: #253341; border: 1px solid #38444d; border-radius: 4px; padding: 2px;">
+                      <button id="radarValuesShowCompare" class="radar-values-btn" style="
+                        background: transparent; border: none; color: #8b98a5;
+                        padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;
+                        transition: all 0.2s;
+                      ">数値表示</button>
+                      <button id="radarValuesHideCompare" class="radar-values-btn" style="
+                        background: #1da1f2; border: none; color: #ffffff;
+                        padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;
+                        transition: all 0.2s;
+                      ">数値非表示</button>
+                    </div>
+                  </div>
+                </span>
+                
+                <div class="radar-compare-help-tooltip" style="
+                  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+                  background: #1a2332; border: 1px solid #38444d; border-radius: 8px;
+                  padding: 16px; z-index: 1000; width: 350px; display: none;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-top: 8px;
+                ">
+                  <h4 style="margin: 0 0 12px 0; color: #ffffff; font-size: 14px;">比較レーダーチャート説明</h4>
+                  <div style="color: #8b98a5; font-size: 11px; line-height: 1.4;">
+                    複数ユーザーの影響力を同一チャート上で比較表示<br>
+                    各色の線が異なるユーザーを表示<br>
+                    基準値や計算方法は単一モードと同じ
+                  </div>
+                </div>
+              </div>
+              
+              <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 16px; flex-direction: column;">
+                <canvas id="influenceCompareRadarChart" width="400" height="400" style="max-width: 100%;"></canvas>
+                <div style="display: flex; align-items: center; gap: 4px; background: #253341; border: 1px solid #38444d; border-radius: 4px; padding: 4px; margin-top: 8px;">
+                  <button id="radarZoomOut" class="radar-zoom-btn" style="
+                    background: transparent; border: none; color: #8b98a5;
+                    padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;
+                    transition: all 0.2s;
+                  ">－</button>
+                  <span id="radarZoomLevel" style="color: #8b98a5; font-size: 11px; min-width: 45px; text-align: center;">100%</span>
+                  <button id="radarZoomIn" class="radar-zoom-btn" style="
+                    background: transparent; border: none; color: #8b98a5;
+                    padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;
+                    transition: all 0.2s;
+                  ">＋</button>
+                  <button id="radarZoomReset" class="radar-zoom-btn" style="
+                    background: transparent; border: none; color: #8b98a5;
+                    padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;
+                    transition: all 0.2s;
+                  ">リセット</button>
+                </div>
+              </div>
+              
+                <div id="influenceComparisonLegend" style="display: flex; justify-content: center; gap: 20px; margin-top: 16px; flex-wrap: wrap;">
+                  <!-- 凡例が動的に追加される -->
+                </div>
+              </div>
+            </div>
+
+            <!-- 比較統計テーブル -->
+            <div style="background: #253341; border: 1px solid #38444d; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <div style="overflow-x: auto;">
+                <table id="influenceComparisonTable" style="width: 100%; border-collapse: collapse;">
+                  <!-- テーブルヘッダーとデータが動的に追加される -->
+                </table>
+              </div>
+            </div>
+            
+            <!-- 比較モード用エンゲージメント推移グラフ -->
+            <div style="background: #253341; border: 1px solid #38444d; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap;">
+                <h4 style="font-size: 16px; font-weight: 700; margin: 0; color: #ffffff;">エンゲージメント推移比較</h4>
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                  <!-- メトリクス選択 -->
+                  <select id="comparisonEngagementMetric" style="background: #253341; border: 1px solid #38444d; color: #ffffff; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                    <option value="likes" selected>いいね</option>
+                    <option value="retweets">リツイート</option>
+                    <option value="replies">返信</option>
+                    <option value="views">閲覧数</option>
+                    <option value="posts">投稿数</option>
+                  </select>
+                  
+                  <!-- 期間 -->
+                  <select id="comparisonEngagementPeriod" style="background: #253341; border: 1px solid #38444d; color: #ffffff; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                    <option value="daily" selected>日次</option>
+                    <option value="weekly">週次</option>
+                    <option value="monthly">月次</option>
+                    <option value="yearly">年次</option>
+                  </select>
+                  
+                  <!-- 期間範囲選択 -->
+                  <select id="comparisonEngagementRange" style="background: #253341; border: 1px solid #38444d; color: #ffffff; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                    <option value="all" selected>全期間</option>
+                    <option value="custom">期間指定</option>
+                  </select>
+                  
+                  <!-- カスタム期間入力（初期は非表示） -->
+                  <div id="comparisonCustomRangeInputs" style="display: none; gap: 8px; align-items: center;">
+                    <input type="date" id="comparisonStartDate" style="background: #253341; border: 1px solid #38444d; color: #ffffff; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                    <span style="color: #8b98a5;">〜</span>
+                    <input type="date" id="comparisonEndDate" style="background: #253341; border: 1px solid #38444d; color: #ffffff; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                    <button id="comparisonApplyDateRange" style="background: #1da1f2; border: none; color: #ffffff; padding: 4px 12px; border-radius: 4px; font-size: 12px; cursor: pointer;">適用</button>
+                  </div>
+                </div>
+              </div>
+              
+              <div style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+                <canvas id="engagementComparisonChart" width="800" height="250" style="width: 100%; height: 250px; background: #192734; border-radius: 8px;"></canvas>
+                <div id="comparisonEngagementLegend" style="display: flex; justify-content: center; gap: 20px; margin-top: 12px; flex-wrap: wrap;">
+                  <!-- 凡例が動的に追加される -->
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+
+        <!-- ログパネル -->
+        <div class="analytics-panel" id="logsPanel">
+          <div class="logs-content" id="logsContent">
+            <div class="log-entry">
+              <span class="log-time">--:--:--</span>
+              <span class="log-message log-info">システム起動完了</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- レート制限バー -->
+  <div class="rate-limit-bar">
+    <div class="rate-info">
+      <span class="rate-label">API使用状況:</span>
+      <span class="rate-value" id="rateUsed">0</span>
+      <span class="rate-label">/</span>
+      <span class="rate-value">50</span>
+    </div>
+    <div class="rate-progress">
+      <div class="rate-progress-fill" id="rateProgressFill" style="width: 0%"></div>
+    </div>
+    <div class="rate-info">
+      <span class="rate-label">リセット:</span>
+      <span class="rate-value" id="rateReset">--:--</span>
+    </div>
+    <!-- <div class="rate-info">
+      <span class="rate-label">残り:</span>
+      <span class="rate-value" id="rateRemaining">50</span>
+    </div> -->
+  </div>
+
+  <!-- インポート用のファイル入力（複数選択対応） -->
+  <input type="file" id="importFileInput" accept=".json" multiple title="複数ファイルを選択するにはCtrl+クリック（Mac: Cmd+クリック）またはShift+クリックで範囲選択" style="display: none;">
+  
+
+
+  <!-- レーダーチャート基準値設定モーダル -->
+  <div id="radarBenchmarkModal" style="
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  ">
+    <div style="
+      background: #253341;
+      border-radius: 12px;
+      padding: 24px;
+      width: 500px;
+      max-width: 90vw;
+      border: 1px solid #38444d;
+    ">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="color: #ffffff; margin: 0; font-size: 18px;">⚙️ レーダーチャート基準値設定</h3>
+        <button id="closeBenchmarkModal" style="
+          background: none;
+          border: none;
+          color: #8b98a5;
+          font-size: 20px;
+          cursor: pointer;
+          padding: 4px;
+        ">&times;</button>
+      </div>
+      
+      <div style="color: #8b98a5; font-size: 13px; margin-bottom: 20px;">
+        レーダーチャートの基準値を設定します。値「1.0」がこの基準値に対応します。
+      </div>
+      
+      <div style="display: grid; gap: 16px;">
+        <div style="display: grid; grid-template-columns: 120px 1fr 80px; gap: 12px; align-items: center;">
+          <label style="color: #ffffff; font-size: 14px;">❤️ いいね数</label>
+          <input type="number" id="benchmarkLikes" style="
+            background: #1a202c;
+            border: 1px solid #38444d;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+          ">
+          <span style="color: #8b98a5; font-size: 12px;">平均/投稿</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 120px 1fr 80px; gap: 12px; align-items: center;">
+          <label style="color: #ffffff; font-size: 14px;">🔄 リツイート数</label>
+          <input type="number" id="benchmarkRetweets" style="
+            background: #1a202c;
+            border: 1px solid #38444d;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+          ">
+          <span style="color: #8b98a5; font-size: 12px;">平均/投稿</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 120px 1fr 80px; gap: 12px; align-items: center;">
+          <label style="color: #ffffff; font-size: 14px;">👁️ 閲覧数</label>
+          <input type="number" id="benchmarkViews" style="
+            background: #1a202c;
+            border: 1px solid #38444d;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+          ">
+          <span style="color: #8b98a5; font-size: 12px;">平均/投稿</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 120px 1fr 80px; gap: 12px; align-items: center;">
+          <label style="color: #ffffff; font-size: 14px;">📊 投稿頻度</label>
+          <input type="number" step="0.1" id="benchmarkFrequency" style="
+            background: #1a202c;
+            border: 1px solid #38444d;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+          ">
+          <span style="color: #8b98a5; font-size: 12px;">投稿/日</span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 120px 1fr 80px; gap: 12px; align-items: center;">
+          <label style="color: #ffffff; font-size: 14px;">📈 投稿数</label>
+          <input type="number" id="benchmarkVolume" style="
+            background: #1a202c;
+            border: 1px solid #38444d;
+            color: #ffffff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+          ">
+          <span style="color: #8b98a5; font-size: 12px;">総投稿数</span>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end;">
+        <button id="resetBenchmarkDefaults" style="
+          background: #536471;
+          color: #ffffff;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+        ">デフォルトに戻す</button>
+        <button id="saveBenchmarkSettings" style="
+          background: #1da1f2;
+          color: #ffffff;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 14px;
+        ">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- インポートモーダル -->
+  <div id="importModal" class="import-modal" style="display: none;">
+    <div class="import-modal-content">
+      <div class="import-modal-header">
+        <h3>📥 データをインポート</h3>
+        <button class="import-modal-close" id="importModalClose">×</button>
+      </div>
+      <div class="import-modal-body">
+        <!-- ファイル選択ボタン -->
+        <div class="import-file-section">
+          <button class="import-file-button" id="importFileButton">
+            <div class="import-file-icon">📁</div>
+            <div class="import-file-text">
+              <div class="import-file-title">ファイルを選択</div>
+              <div class="import-file-desc">複数のJSONファイルを選択してインポート</div>
+            </div>
+          </button>
+        </div>
+        
+        <!-- または区切り -->
+        <div class="import-divider">
+          <span>または</span>
+        </div>
+        
+        <!-- ドラッグ&ドロップエリア -->
+        <div class="import-drop-zone" id="importDropZone">
+          <div class="import-drop-icon">🖱️</div>
+          <div class="import-drop-text">
+            <div class="import-drop-title">ファイルをここにドラッグ&ドロップ</div>
+            <div class="import-drop-desc">複数ファイルの一括インポートが可能です</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="influence-analysis.js"></script>
+  <script src="panel.js"></script>
+  <script src="graph-tab.js"></script>
+  <script src="tweets-tab.js"></script>
+  <script src="accounts-tab.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "X Tweet Capture",
+  "version": "1.0",
+  "description": "Xのキーワードからトレンドを分析・可視化するツール",
+  "permissions": [
+    "webRequest",
+    "scripting",
+    "tabs",
+    "activeTab",
+    "storage",
+    "cookies",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://pbs.twimg.com/*",
+    "https://twimg.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "devtools_page": "devtools.html"
+}
